@@ -3,14 +3,13 @@
 namespace Core.Entities;
 
 [StronglyTypedId(converters: StronglyTypedIdConverter.SystemTextJson)]
-public partial struct ProductId : IStronglyTypedId<Product>
+public partial struct ProductBrandId : IStronglyTypedId<ProductBrand>
 {
-    public Product CreateEmptyEntity()
+    public ProductBrand CreateEmptyEntity()
     {
-        var product = new Product
+        return new ProductBrand
         {
             Id = this
         };
-        return product;
     }
 }

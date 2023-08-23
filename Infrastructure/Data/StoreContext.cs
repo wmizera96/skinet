@@ -1,4 +1,5 @@
-﻿using API.Data;
+﻿using System.Reflection;
+using API.Data;
 using Core.Entities;
 using Infrastructure.ValueConverters;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,8 @@ public class StoreContext : DbContext
     }
 
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductBrand> ProductBrands => Set<ProductBrand>();
+    public DbSet<ProductType> ProductTypes => Set<ProductType>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -29,6 +32,8 @@ public class StoreContext : DbContext
         modelBuilder.ApplyGlobalFilters<BaseEntity>(x => x.IsDeleted == false);
         
         modelBuilder.FixSqliteDateTimeOffset(Database);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -36,5 +41,7 @@ public class StoreContext : DbContext
         base.ConfigureConventions(configurationBuilder);
         
         configurationBuilder.Properties<ProductId>().HaveConversion<ProductIdValueConverter>();
+        configurationBuilder.Properties<ProductBrandId>().HaveConversion<ProductBrandIdValueConverter>();
+        configurationBuilder.Properties<ProductTypeId>().HaveConversion<ProductTypeIdValueConverter>();
     }
 }
