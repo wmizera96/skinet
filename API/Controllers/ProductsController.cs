@@ -1,8 +1,9 @@
-﻿using Core.Entities;
+﻿using API.DTOs;
+using AutoMapper;
+using Core.Entities;
 using Core.Interfaces;
-using Infrastructure.Data;
+using Core.Specifications;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
@@ -10,54 +11,51 @@ namespace API.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private readonly StoreContext _context;
-    private readonly IProductRepository _productRepository;
+    private readonly IGenericRepository<Product> _productsRepository;
+    private readonly IGenericRepository<ProductBrand> _productBrandsRepository;
+    private readonly IGenericRepository<ProductType> _productTypesRepository;
+    private readonly IMapper _mapper;
 
-    public ProductsController(StoreContext context, IProductRepository productRepository)
+    public ProductsController(
+        IGenericRepository<Product> productsRepository,
+        IGenericRepository<ProductBrand> productBrandsRepository,
+        IGenericRepository<ProductType> productTypesRepository,
+        IMapper mapper)
     {
-        _context = context;
-        _productRepository = productRepository;
+        _productsRepository = productsRepository;
+        _productBrandsRepository = productBrandsRepository;
+        _productTypesRepository = productTypesRepository;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Product>>> GetProducts(CancellationToken cancellationToken)
+    public async Task<ActionResult<List<ProductToReturnDto>>> GetProducts(CancellationToken cancellationToken)
     {
-        return Ok(await _productRepository.GetProductsAsync(cancellationToken));
+        var spec = new ProductsWithTypesAndBrandsSpecification();
+        
+        var products = await _productsRepository.ListAsync(spec, cancellationToken);
+
+        return Ok(_mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(products));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Product>> GetProduct([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProductToReturnDto>> GetProduct([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        return Ok(await _productRepository.GetProductByIdAsync(new ProductId(id), cancellationToken));
+        var spec = new ProductsWithTypesAndBrandsSpecification(new ProductId(id));
+        var product = await _productsRepository.GetEntityWithSpecAsync(spec, cancellationToken);
+
+        return Ok(_mapper.Map<Product, ProductToReturnDto>(product));
     }
 
-
-    [HttpPost]
-    public async Task<ActionResult> CreateProduct([FromQuery] string name)
-    {
-        _context.Products.Add(new Product { Name = name });
-        await _context.SaveChangesAsync();
-        return Ok();
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteProduct([FromRoute] Guid id, CancellationToken cancellationToken)
-    {
-        var productId = new ProductId(id);
-        _context.Products.SoftDelete(productId);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Ok();
-    }
-    
     [HttpGet("brands")]
     public async Task<ActionResult<IReadOnlyCollection<ProductBrand>>> GetProductBrands(CancellationToken cancellationToken)
     {
-        return Ok(await _productRepository.GetProductBrandsAsync(cancellationToken));
+        return Ok(await _productBrandsRepository.ListAllAsync(cancellationToken));
     }
     
     [HttpGet("types")]
     public async Task<ActionResult<IReadOnlyCollection<ProductType>>> GetProductTypes(CancellationToken cancellationToken)
     {
-        return Ok(await _productRepository.GetProductTypesAsync(cancellationToken));
+        return Ok(await _productTypesRepository.ListAllAsync(cancellationToken));
     }
 }
